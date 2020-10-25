@@ -2,6 +2,7 @@ import { graphql, Link } from 'gatsby';
 import React from 'react';
 import Img from 'gatsby-image';
 import styled from 'styled-components';
+import Pagination from '../components/Pagination';
 
 const SliceMasterGrid = styled.div`
   display: grid;
@@ -36,28 +37,37 @@ const SlicemasterStyles = styled.div`
   }
 `;
 
-const SlicemastersPage = ({ data }) => {
+const SlicemastersPage = ({ data, pageContext }) => {
   const slicemasters = data.slicemasters.nodes;
   return (
-    <SliceMasterGrid>
-      {slicemasters.map((person) => (
-        <SlicemasterStyles>
-          <Link to={`/slicemaster/${person.slug.current}`}>
-            <h2>
-              <span className="mark">{person.name}</span>
-            </h2>
-          </Link>
-          <Img fluid={person.image.asset.fluid} />
-          <p className="description">{person.description}</p>
-        </SlicemasterStyles>
-      ))}
-    </SliceMasterGrid>
+    <>
+      <Pagination
+        pageSize={parseInt(process.env.GATSBY_PAGE_SIZE, 10)}
+        totalCount={data.slicemasters.totalCount}
+        currentPage={pageContext.currentPage || 1}
+        skip={pageContext.skip}
+        base="/slicemasters"
+      />
+      <SliceMasterGrid>
+        {slicemasters.map((person) => (
+          <SlicemasterStyles>
+            <Link to={`/slicemaster/${person.slug.current}`}>
+              <h2>
+                <span className="mark">{person.name}</span>
+              </h2>
+            </Link>
+            <Img fluid={person.image.asset.fluid} />
+            <p className="description">{person.description}</p>
+          </SlicemasterStyles>
+        ))}
+      </SliceMasterGrid>
+    </>
   );
 };
 
 export const query = graphql`
-  query {
-    slicemasters: allSanityPerson {
+  query($skip: Int = 0, $pageSize: Int = 3) {
+    slicemasters: allSanityPerson(limit: $pageSize, skip: $skip) {
       totalCount
       nodes {
         name
