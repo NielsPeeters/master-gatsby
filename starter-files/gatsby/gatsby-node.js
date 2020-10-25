@@ -1,4 +1,4 @@
-import path from 'path';
+import path, { resolve } from 'path';
 import fetch from 'isomorphic-fetch';
 
 const turnPizzasIntoPages = async ({ graphql, actions }) => {
@@ -85,20 +85,61 @@ const fetchBeersAndTurnIntoNodes = async ({
   }
 };
 
+const turnSlicemastersIntoPages = async ({ graphql, actions }) => {
+  // 1. Query all Slicemasters
+  const { data } = await graphql(`
+    query {
+      slicemasters: allSanityPerson {
+        totalCount
+        nodes {
+          name
+          id
+          slug {
+            current
+          }
+        }
+      }
+    }
+  `);
+  // 2. Turn each slicemaster into their own pages
+  data.slicemasters.nodes.forEach((slicemaster) => {
+    actions.createPage({
+      path: `/slicemaster/${slicemaster.slug.current}`,
+      component: resolve('./src/templates/Slicemaster.js'),
+      context: {
+        name: slicemaster.person,
+        slug: slicemaster.slug.current,
+      },
+    });
+  });
+  // 3. Figure out how many pages there are based on the amount of slicemasters
+  const pageSize = parseInt(process.env.GATSBY_PAGE_SIZE, 10);
+  const pageCount = Math.ceil(data.slicemasters.totalCount / pageSize);
+  // 4. loop from 1 to n  and create the pages
+  Array.from({ length: pageCount }).forEach((_, index) => {
+    actions.createPage({
+      path: `/slicemasters/${index + 1}`,
+      component: resolve('./src/pages/slicemasters.js'),
+      context: {
+        skip: index * pageSize,
+        currentPage: index + 1,
+        pageSize,
+      },
+    });
+  });
+};
+
 export const sourceNodes = async (params) => {
   // 1. fetch a list of beers and source them into our gatsby api
-  const beers = fetchBeersAndTurnIntoNodes(params);
-
-  await Promise.all([beers]);
+  await Promise.all([fetchBeersAndTurnIntoNodes(params)]);
 };
 
 export const createPages = async (params) => {
-  console.log('Creating pages');
-  // 1. Pizzas
-  const pizzaPages = turnPizzasIntoPages(params);
-  // 2. Toppings
-  const toppingPages = turnToppingsIntoPages(params);
-  // 3. Slicemasters
-
-  await Promise.all([pizzaPages, toppingPages]);
+  // Create pages dynamically
+  // Wait for all promises to be resolved before finishing this function
+  await Promise.all([
+    turnPizzasIntoPages(params),
+    turnToppingsIntoPages(params),
+    turnSlicemastersIntoPages(params),
+  ]);
 };
