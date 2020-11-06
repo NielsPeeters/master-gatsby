@@ -25,6 +25,10 @@ const OrderStyles = styled.form`
       grid-column: span 2;
     }
   }
+
+  .maple {
+    display: none;
+  }
 `;
 
 export default OrderStyles;
